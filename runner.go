@@ -1,11 +1,16 @@
 package runner
 
-import "sync"
+import (
+	"context"
+	"sync"
+)
 
 type Runner interface {
 	Run(func() error)
 	Stopping() <-chan struct{}
-	Error(error)
+	Context() context.Context
+
+	Wait() error
 	Stop() error
 	Errors() []error
 }
@@ -17,11 +22,18 @@ type runner struct {
 	errors      []error
 
 	wg sync.WaitGroup
+
+	ctx       context.Context
+	cancelCtx func()
 }
 
 func New() Runner {
+	ctx := context.Background()
+	ctx, cancel := context.WithCancel(ctx)
 	return &runner{
-		stopping: make(chan struct{}),
+		stopping:  make(chan struct{}),
+		ctx:       ctx,
+		cancelCtx: cancel,
 	}
 }
 
@@ -43,29 +55,31 @@ func (r *runner) Run(f func() error) {
 			r.errors = append(r.errors, err)
 			r.errorsMutex.Unlock()
 			r.closeStopping()
+			r.cancelCtx()
 		}
 		r.wg.Done()
 	}()
+}
+
+func (r *runner) Context() context.Context {
+	return r.ctx
 }
 
 func (r *runner) Stopping() <-chan struct{} {
 	return r.stopping
 }
 
-func (r *runner) Error(err error) {
-	r.errorsMutex.Lock()
-	r.errors = append(r.errors, err)
-	r.errorsMutex.Unlock()
-	r.closeStopping()
-}
-
-func (r *runner) Stop() error {
-	r.closeStopping()
+func (r *runner) Wait() error {
 	r.wg.Wait()
 	if len(r.errors) > 0 {
 		return r.errors[0]
 	}
 	return nil
+}
+
+func (r *runner) Stop() error {
+	r.closeStopping()
+	return r.Wait()
 }
 
 func (r *runner) Errors() []error {
