@@ -16,7 +16,8 @@ type Runner interface {
 }
 
 type runner struct {
-	stopping chan struct{}
+	stoppingMutex sync.Mutex
+	stopping      chan struct{}
 
 	errorsMutex sync.Mutex
 	errors      []error
@@ -39,12 +40,14 @@ func New() Runner {
 
 func (r *runner) closeStopping() {
 	// So we don't close an already closed channel.
+
+	r.stoppingMutex.Lock()
 	select {
 	case <-r.stopping:
 	default:
 		close(r.stopping)
 	}
-
+	r.stoppingMutex.Unlock()
 }
 
 func (r *runner) Run(f func() error) {
