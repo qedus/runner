@@ -38,7 +38,7 @@ func New() Runner {
 	}
 }
 
-func (r *runner) closeStopping() {
+func (r *runner) stop() {
 	// So we don't close an already closed channel.
 
 	r.stoppingMutex.Lock()
@@ -48,6 +48,7 @@ func (r *runner) closeStopping() {
 		close(r.stopping)
 	}
 	r.stoppingMutex.Unlock()
+	r.cancelCtx()
 }
 
 func (r *runner) Run(f func() error) {
@@ -57,8 +58,7 @@ func (r *runner) Run(f func() error) {
 			r.errorsMutex.Lock()
 			r.errors = append(r.errors, err)
 			r.errorsMutex.Unlock()
-			r.closeStopping()
-			r.cancelCtx()
+			r.stop()
 		}
 		r.wg.Done()
 	}()
@@ -81,7 +81,7 @@ func (r *runner) Wait() error {
 }
 
 func (r *runner) Stop() error {
-	r.closeStopping()
+	r.stop()
 	return r.Wait()
 }
 
