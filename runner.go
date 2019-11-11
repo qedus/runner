@@ -46,9 +46,9 @@ func (r *runner) stop() {
 	case <-r.stopping:
 	default:
 		close(r.stopping)
+		r.cancelCtx()
 	}
 	r.stoppingMutex.Unlock()
-	r.cancelCtx()
 }
 
 func (r *runner) Run(f func() error) {
