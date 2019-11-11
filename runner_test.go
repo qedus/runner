@@ -22,7 +22,8 @@ func TestRunner(t *testing.T) {
 		return dummyErr
 	})
 
-	if err := r.Stop(); err != dummyErr {
+	r.Stop()
+	if err := r.Wait(); err != dummyErr {
 		t.Fatal("Incorrect error.")
 	}
 

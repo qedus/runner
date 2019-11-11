@@ -11,7 +11,7 @@ type Runner interface {
 	Context() context.Context
 
 	Wait() error
-	Stop() error
+	Stop()
 	Errors() []error
 }
 
@@ -38,9 +38,8 @@ func New() Runner {
 	}
 }
 
-func (r *runner) stop() {
+func (r *runner) Stop() {
 	// So we don't close an already closed channel.
-
 	r.stoppingMutex.Lock()
 	select {
 	case <-r.stopping:
@@ -58,7 +57,7 @@ func (r *runner) Run(f func() error) {
 			r.errorsMutex.Lock()
 			r.errors = append(r.errors, err)
 			r.errorsMutex.Unlock()
-			r.stop()
+			r.Stop()
 		}
 		r.wg.Done()
 	}()
@@ -78,11 +77,6 @@ func (r *runner) Wait() error {
 		return r.errors[0]
 	}
 	return nil
-}
-
-func (r *runner) Stop() error {
-	r.stop()
-	return r.Wait()
 }
 
 func (r *runner) Errors() []error {
