@@ -1,2 +1,2 @@
 # runner
-A goroutine coortinator inspired by https://github.com/go-tomb/tomb/tree/v2.
+A goroutine coordinator inspired by https://github.com/go-tomb/tomb/tree/v2.
